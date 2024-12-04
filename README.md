@@ -16,6 +16,6 @@ with the scripts:
 	- [4c-run_Figure_PROJEC](4c-run_Figure_PROJEC.R) for plotting the projection results
 
 Necessary R packages:
-- Random forest model [ranger](10.32614/CRAN.package.ranger)
-- Plotting utilities [ggplot2](), [RColorBrewer](10.32614/CRAN.package.RColorBrewer) and [cowplot](10.32614/CRAN.package.cowplot)
-- Data manipulation [dplyr](10.32614/CRAN.package.dplyr)
+- Random forest model [ranger]((https://cran.r-project.org/web/packages/ranger/index.html))
+- Plotting utilities [ggplot2](https://ggplot2.tidyverse.org/), [RColorBrewer](https://cran.r-project.org/web/packages/RColorBrewer/index.html) and [cowplot](https://cran.r-project.org/web/packages/cowplot/index.html)
+- Data manipulation [dplyr](https://cran.r-project.org/web/packages/dplyr/index.html)
