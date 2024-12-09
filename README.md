@@ -1,7 +1,7 @@
 # Emulator's experiments for MME design
 
 This repository contains the data and codes of [Rohmer et al. 2024 submitted]() for:
-- Analysing the 2100 GriIS ['MME'](./data) with the scripts 
+- Analysing the 2100 GriIS [`MME`](./data) with the scripts 
 	- [1-run_analysis_originalMME](./1-run_analysis_originalMME.R]) for ploting the histograms, the projections and the validaiton of the RF reference solution
 	- [0-run_sensitivity](./0-run_sensitivity.R) for running the sensitivity analsyis
 - Defining the experiments for
