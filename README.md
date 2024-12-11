@@ -1,7 +1,9 @@
 # Emulator's experiments for MME design
 
 This repository contains the data and codes of [Rohmer et al. 2024 submitted]().
-== FIRST: unzip the [files](files.zip) ==
+
+==== FIRST: unzip the [files](files.zip) ====
+
 The different scrips allow to:
 - Analyse the 2100 GrIS MME stored in [`./data`](./data) with the scripts 
 	- [1-run_analysis_originalMME](1-run_analysis_originalMME.R) for ploting the histograms, the projections and the validaiton of the RF reference solution
