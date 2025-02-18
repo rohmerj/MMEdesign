@@ -1,6 +1,6 @@
 # Emulator's experiments for MME design
 
-This repository contains the data and codes of [Rohmer et al. 2024 submitted]().
+This repository contains the data and codes of [Rohmer et al. 2025 submitted](https://egusphere.copernicus.org/preprints/2025/egusphere-2025-52/).
 
 ==== FIRST: unzip the [files](files.zip) ====
 
