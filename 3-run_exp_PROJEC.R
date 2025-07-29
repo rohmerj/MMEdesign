@@ -41,6 +41,7 @@ RESOL.r0 = sample(unique(df.tr0[,"x.resolution"]),nMC,replace=T)
 RCM_init.r0 = sample(unique(df.tr0[,"x.RCM_init"]),nMC,replace=T)
 elev_feedback.r0 = sample(unique(df.tr0[,"x.elev_feedback"]),nMC,replace=T)
 kappa.r0 = replicate(nMC, f.dens$x[findInterval(runif(1), cdf.estimate)+1])
+#init_yrs.r0 = sample(unique(df.tr0[,"x.init_yrs"]),nMC,replace=T)
 
 #########################################################
 ##### DEFINE CASE
@@ -56,13 +57,15 @@ CClist = c("RCP","RCM","KAPPA","ISM")
 #########################################################
 TT0 = tune(df.tr0,MTRY,NODE,NUM)
 OU0 = maxArray(TT0)$CC
-mod0 = ranger(sl ~ ., data = df.tr0,importance="none",num.trees = 1000,mtry=MTRY[OU0[1]],min.node.size = NODE[OU0[2]])
+mod0 = ranger(sl ~ ., data = df.tr0,importance="none",num.trees = 1000,
+		  mtry=MTRY[OU0[1]],min.node.size = NODE[OU0[2]],
+				respect.unordered.factors = 'order',
+				quantreg = TRUE
+		)
 
 #########################################################
 ##### PROBABILISTIC PROJECTION
 #########################################################
-Y.hat = Y.te0 = list()
-
 ## loop on experiment
 for (CAS in CClist){
 
@@ -81,7 +84,11 @@ for (iter2 in 1:Niter2){
 	## TRAIN
 	TT = tune(df.tr.BB,MTRY,NODE,NUM)
 	OU = maxArray(TT)$CC
-	mod <- ranger(sl ~ ., data = df.tr.BB,importance="none",num.trees = 1000,mtry=MTRY[OU[1]],min.node.size = NODE[OU[2]])
+	mod <- ranger(sl ~ ., data = df.tr.BB,importance="none",num.trees = 1000,
+			mtry=MTRY[OU[1]],min.node.size = NODE[OU[2]],
+			respect.unordered.factors = 'order',
+				quantreg = TRUE
+			)
 
 	## SAMPLE
 	ISM.r = sample(unique(df.tr.BB[,"x.model"]),nMC,replace=T)
@@ -89,18 +96,21 @@ for (iter2 in 1:Niter2){
 	RESOL.r = sample(unique(df.tr.BB[,"x.resolution"]),nMC,replace=T)
 	RCM_init.r = sample(unique(df.tr.BB[,"x.RCM_init"]),nMC,replace=T)
 	elev_feedback.r = sample(unique(df.tr.BB[,"x.elev_feedback"]),nMC,replace=T)
+	#init_yrs.r = sample(unique(df.tr.BB[,"x.init_yrs"]),nMC,replace=T)
 	kappa.r = replicate(nMC, f.dens$x[findInterval(runif(1), cdf.estimate)+1])
 
 	### GSAT scenario
-	for (TEMP in c(2,3,4)){
+	for (TEMP in c(2,4)){
 
-	C.r = rep(TEMP,nMC)
+	#C.r = rep(TEMP,nMC)
+	C.r = runif(nMC)*0.5+TEMP-0.25
 	df.te.BB = data.frame(
 		x.model = ISM.r,
 		x.RCM = RCM.r,
 		x.retreat = kappa.r,
 		x.resolution = RESOL.r,
 		x.RCM_init = RCM_init.r,
+		#x.init_yrs = init_yrs.r,
 		x.elev_feedback = elev_feedback.r,
 		C = C.r
 	)
@@ -111,18 +121,25 @@ for (iter2 in 1:Niter2){
 		x.retreat = kappa.r0,
 		x.resolution = RESOL.r0,
 		x.RCM_init = RCM_init.r0,
+		#x.init_yrs = init_yrs.r0,
 		x.elev_feedback = elev_feedback.r0,
 		C = C.r
 	)
 	
 
 	## PREDICT
-	Y.hat[[paste0(nom_cas[iter2],"_GSAT",TEMP)]] <- Yte <- predict(mod,df.te.BB)$predictions
+	Yte <- predict(mod,df.te.BB)$predictions
 
 	## PREDICT REFERENCE SOLUTION
-	Y.te0[[paste0(nom_cas[iter2],"_GSAT",TEMP)]] <- Yte0 <- predict(mod0,df.te0)$predictions
+	Yte0 <- predict(mod0,df.te0)$predictions
+
+	## PREDICT
+	Qte <- predict(mod,df.te.BB,type = "quantiles", quantiles = seq(0,1,by=0.05))$predictions
+
+	## PREDICT REFERENCE SOLUTION
+	Qte0 <- predict(mod0,df.te0,type = "quantiles", quantiles = seq(0,1,by=0.05))$predictions
 	
-	save(Yte,Yte0,df.te.BB,df.te0, file=paste0("./exp_pred/Exp_Cas",CAS,"-Test",nom_cas[iter2],"_GSAT",TEMP,".RData"))
+	save(Yte,Yte0,Qte,Qte0,df.te.BB,df.te0, file=paste0("./exp_pred/Exp_Cas",CAS,"-Test",nom_cas[iter2],"_GSAT",TEMP,".RData"))
 	
 	}
 

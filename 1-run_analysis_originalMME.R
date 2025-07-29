@@ -6,6 +6,25 @@ library(RColorBrewer)
 rm(list=ls())
 
 #########################################################
+##### FUNCTIONS
+#########################################################
+source("./utils/utils.R")
+
+#########################################################
+##### PLOT PARAMETERS
+#########################################################
+tt <- theme(
+		axis.title.x = element_text(size=14),
+		axis.title.y = element_text(size=14),#, face="bold"
+		axis.text.y= element_text(size=14),
+		axis.text.x= element_text(size=14),
+		axis.ticks = element_line(size = 0.75),
+		legend.title=element_blank(),
+		legend.position="none",
+		plot.title = element_text(size = 14, face = "bold")
+		)
+
+#########################################################
 ##### DATA
 #########################################################
 load("./data/GrIS_MME_2100.RData")
@@ -15,16 +34,6 @@ df.tr = df.tr1
 ##### DOE
 #########################################################
 ### HISTOGRAMM
-tt <- theme(
-		axis.title.x = element_text(size=14),
-		axis.title.y = element_text(size=14),#, face="bold"
-		axis.text.y= element_text(size=14),
-		axis.text.x= element_text(size=14),
-		axis.ticks = element_line(size = 0.75),
-		legend.title=element_blank(),
-		legend.position="none"
-		)
-
 p.scenario<-ggplot(df.tr, aes(x = x.scenario))+
 	  #coord_flip()+
 	  xlab('Scenario')+
@@ -73,23 +82,23 @@ p.init<-ggplot(df.tr, aes(x = x.init))+
 p.kappa<-ggplot(df.tr, aes(x = x.retreat))+
 	  coord_flip()+
 	  xlab(expression(paste(kappa,' [ km (',m^3, s^-1, ')x',10^-0.4,"°",C^-1,"]")))+
-        geom_bar( position = position_dodge(width = 0.8))+theme_bw()+tt+ylim(0,400)
+        geom_bar( position = position_dodge(width = 0.8),width=.01)+theme_bw()+tt+ylim(0,400)
 
 p.resolution<-ggplot(df.tr, aes(x = x.resolution))+
 	  coord_flip()+
 	  xlab("Resolution [km]")+
-        geom_bar( position = position_dodge(width = 0.8))+theme_bw()+tt+ylim(0,400)
+        geom_bar( position = position_dodge(width = 0.8),width=.25)+theme_bw()+tt+ylim(0,400)
 
 p.gsat<-ggplot(df.tr, aes(x = C))+
 	  coord_flip()+
         xlab("GSAT diff. [°C]")+
-        geom_bar( position = position_dodge(width = 4))+theme_bw()+tt+ylim(0,400)
+        geom_bar( position = position_dodge(width = 4),width=.05)+theme_bw()+tt+ylim(0,400)
 
 p.init_yrs<-ggplot(df.tr, aes(x = x.init_yrs))+
 	  coord_flip()+
-	  xlab("Numer of years for initialisation")+
-        geom_bar( position = position_dodge(width = 0.8))+theme_bw()+tt+ylim(0,1300)
-
+	  xlab(paste0("Number of years","\n"," for initialisation"))+
+        geom_bar()+theme_bw()+tt+ylim(0,1300)
+# position = position_dodge(width = 0.8),width=.05
 ####### PLOT continuous variables
 PLTcont <- cowplot::plot_grid(
 	p.kappa,
@@ -115,38 +124,38 @@ PLTnegl <- cowplot::plot_grid(
 ###########################################################
 #### PLOT SLC 2100
 ###########################################################
-TXT.med = paste0("Median = ",round(median(df.tr$sl),3))
-TXT.q95 = paste0("",round(quantile(df.tr$sl,0.975),2))
-TXT.q05 = paste0("[",round(quantile(df.tr$sl,0.05),3)," ; ",round(quantile(df.tr$sl,0.95),3), "]")
-p.sle <- ggplot(df.tr, aes(x = sl))+
-        xlab("Sea level contribution in 2100 [m SLE]")+
+TXT.med = paste0("Median = ",round(median(df.tr$sl)*100,1))
+TXT.q95 = paste0("",round(quantile(df.tr$sl,0.83)*100,1))
+TXT.q05 = paste0("[",round(quantile(df.tr$sl,0.17)*100,1)," ; ",round(quantile(df.tr$sl,0.95)*100,1), "]")
+p.sle <- ggplot(df.tr, aes(x = sl*100))+
+        xlab("Sea level contribution in 2100 [cm SLE]")+
 	  #ylab("Count")+
 	  geom_histogram(aes(y=..density..), alpha=0.5, position="identity")+
  	  geom_density(alpha=.2,linewidth=1.25) +
         #geom_bar( position = position_dodge(width = 0.8))+
-	  theme_bw()+tt+ylim(0,9)+
-	  annotate("text", x = .3, y = 7.5, label = TXT.med,size = 6)+
-	  annotate("text", x = .3, y = 7., label = TXT.q05,size = 6)
+	  theme_bw()+tt+ylim(0,.1)+
+	  annotate("text", x = .3*100, y = 7.5/100, label = TXT.med,size = 8)+
+	  annotate("text", x = .3*100, y = 6.8/100, label = TXT.q05,size = 8)
 	  #ggtitle("GSAT diff. [°C]")#
 
 ###########################################################
 #### PLOT Validation ORIGINAL
 ###########################################################
-tt <- theme(
-		axis.title.x = element_text(size=14),
-		axis.title.y = element_text(size=14),#, face="bold"
-		axis.text.y= element_text(size=14),
-		axis.text.x= element_text(size=14),
-		axis.ticks = element_line(size = 0.75),
-		legend.title=element_blank(),
-		legend.position="none",
-		plot.title = element_text(size = 14, face = "bold")
-		)
+load("./data/pval_Permutation.RData")
+## filter with the importance variables
+filtre = which(pval[,"pvalue"]<0.05)
+df.tr00 = df.tr1[,-c(1,2)]
+df.tr00 = df.tr00[,c(filtre,ncol(df.tr00))]
+d = ncol(df.tr00)
 
-RAE0 = QQ0 = NULL
-YHAT = TRUTH = ITER =  NULL
-
+RAE0 = QQ0 = IS90 = IS50 = CRPS = CA = NULL
+YHAT = TRUTH = ITER = Q1HAT = Q3HAT= Q2HAT =  QHAT = NULL
+GSAT.te.BB = matrix(0,200,25)
 for (bb in 1:25){
+
+	CAS = "RCP"
+	load(file=paste0("./exp_cv/exp/Exp_Cas",CAS,"_iter",bb,".RData"))
+	GSAT.te.BB[,bb] = Te = df.tr00[ncv,"C"]
 
 	load(paste0("./exp_cv/init/init_",bb,".RData"))
 
@@ -154,68 +163,108 @@ for (bb in 1:25){
 	QQ0[bb] = 1-sum((Y.te.BB-Yte0)^2)/sum((Y.te.BB-mean(Y.te.BB))^2)
 
 	YHAT = c(YHAT,Yte0)
+	Q1HAT = c(Q1HAT,Qte0[,2])
+	Q3HAT = c(Q3HAT,Qte0[,20])
+	Q2HAT = c(Q2HAT,Qte0[,11])
+	QHAT = rbind(QHAT,Qte0)
 	TRUTH = c(TRUTH,Y.te.BB)
 	ITER = c(ITER, rep(bb,length(Yte0)))
 
+	## Approximated crps
+	### https://search.r-project.org/CRAN/refmans/fabletools/html/distribution_accuracy_measures.html
+	qq = seq(0,1,by=0.05)
+	nmc = length(Y.te.BB)
+	cov.pi = matrix(0,length(qq),nmc)
+	for (kk in 1:(length(qq))){
+		quant = Qte0[,kk]
+		for (imc in 1:nmc){
+		if (Y.te.BB[imc] < quant[imc]){
+			cov.pi[kk,imc] = (-Y.te.BB[imc]+quant[imc])*(1-qq[kk])
+		}
+		if (quant[imc] <= Y.te.BB[imc]){
+			cov.pi[kk,imc] = (Y.te.BB[imc]-quant[imc])*(qq[kk])
+		}
+		}
+	}
+	CRPS[bb] = mean(2*apply(cov.pi,2,sum)*0.05)
+
+
 }
 
+#### scatter plot predictions versus truth
+rr = seq(0,1,by=0.25)#runif(0.1*nrow(df.tr00))
+qq = quantile(df.tr00[,"C"],rr)
 df = data.frame(
-	Q2=QQ0,
-	RAE=RAE0,
-	iter = 1:25,
-	id=rep("",25)
+	sle_predicted = YHAT,
+	Q1 = Q1HAT,
+	Q3 = Q3HAT,	
+	sle_true=TRUTH,
+	iter = ITER,
+	gsat = as.vector(GSAT.te.BB),
+	gsatC= cut(as.vector(GSAT.te.BB),breaks=qq)
 )
 
-#### boxplot Q2
-p.qq= ggplot(df,aes(x=as.factor(id),y=Q2*100))+geom_boxplot(outlier.shape=NA)+
-	geom_jitter(data=df, size=4,aes(color=iter)) + theme_bw()+
-	scale_colour_viridis_c()+
-	theme(
+rae = crps = qq = matrix(0,4,25)
+c = 0
+for (i in unique(df$gsatC)){
+	c = c + 1
+	for (j in 1:25){	
+	f = which(df$gsatC == i & ITER == j)
+	rae[c,j] = mean(abs(df$sle_true[f] - df$sle_predicted[f])/df$sle_true[f])
+	qq[c,j] = Q2(df$sle_true[f],df$sle_predicted[f])
+	crps[c,j] = crps_func(df$sle_true[f],QHAT[f,])	
+	}
+}
+
+gsatC.ll = c("(0.705,2.14]", "(2.14,3.34]", "(3.34,3.83]", "(3.83,5]")
+df.plt <- data.frame(
+		CRPS=c(crps[1,],crps[2,],crps[3,],crps[4,]),
+		Q2=c(qq[1,],qq[2,],qq[3,],qq[4,]),
+		RAE=c(rae[1,],rae[2,],rae[3,],rae[4,]),
+		id = rep("",25*4),
+		GSAT=c(rep(gsatC.ll[1],25),rep(gsatC.ll[2],25),rep(gsatC.ll[3],25),rep(gsatC.ll[4],25))
+		)
+plt.rae= ggplot(df.plt,aes(x=GSAT,y=RAE*100,color=GSAT))+geom_boxplot(linewidth=1.25)+#geom_jitter() + 
+	scale_colour_viridis_d()+
+	geom_hline(yintercept=median(df.plt$RAE*100),col="red",linetype=2,linewidth=2)+
+	theme_bw()+theme(
+	axis.text.x=element_blank(), 
+      axis.ticks.x=element_blank())+xlab("")+ylab("RAE [%]")+tt+ggtitle("(a)")
+
+plt.qq= ggplot(df.plt,aes(x=GSAT,y=Q2*100,color=GSAT))+geom_boxplot(linewidth=1.25)+#geom_jitter() + 
+	scale_colour_viridis_d()+
+	geom_hline(yintercept=median(df.plt$Q2*100),col="red",linetype=2,linewidth=2)+
+	theme_bw()+theme(
 	axis.text.x=element_blank(), 
       axis.ticks.x=element_blank())+xlab("")+ylab("Q² [%]")+tt+ggtitle("(b)")
 
-#### boxplot RAE
-p.rr= ggplot(df,aes(x=as.factor(id),y=RAE*100,color=iter))+geom_boxplot(outlier.shape=NA)+geom_jitter(aes(color=iter), size=4) + 
-	scale_colour_viridis_c()+
+plt.crps= ggplot(df.plt,aes(x=GSAT,y=CRPS,color=GSAT))+geom_boxplot(linewidth=1.25)+#geom_jitter() + 
+	scale_colour_viridis_d()+
+	geom_hline(yintercept=median(df.plt$CRPS),col="red",linetype=2,linewidth=2)+
 	theme_bw()+theme(
 	axis.text.x=element_blank(), 
-      axis.ticks.x=element_blank())+xlab("")+ylab("RAE [%]")+tt+ggtitle("(b)")
+      axis.ticks.x=element_blank())+xlab("")+ylab("CRPS [-]")+tt+ggtitle("(c)")
 
-#### scatter plot predictions versus truth
-df = data.frame(
-	sle_predicted = YHAT,
-	sle_true=TRUTH,
-	iter = ITER
-)
-p.xy= ggplot(df,aes(sle_true,sle_predicted,color=iter))+geom_point(size=4)+geom_abline(xintercept = 0)+scale_colour_viridis_c()+
-	theme_bw()+tt+
-	#theme(legend.position="top")+
-	xlab("slc  in 2100 [m SLE] - true")+ylab("slc in 2100 [m SLE] - predicted")+ggtitle("(a)")
-
-plot_grid(p.xy,p.rr,ncol=2)
+gridExtra::grid.arrange(plt.rae,plt.qq,plt.crps,ncol=3)
 
 ###########################################################
-#### PLOT probabilistic projections
+#### PLOT probabilistic projections NO META UNC
 ###########################################################
 category = NULL
 nom_case = NULL 
 Temp = NULL
 
-q3_15 =  q30_15 = q1_15 =  q10_15 = moy_15 = moy0_15 = Sd_15 = Sd0_15 = NULL
 q3_2 =  q30_2 = q1_2 =  q10_2 = moy_2 = moy0_2 = med_2 = med0_2 = Sd_2 = Sd0_2 = NULL
-q3_3 =  q30_3 = q1_3 =  q10_3 = moy_3 = moy0_3 = med_3 = med0_3 = Sd_3 = Sd0_3 = NULL
 q3_4 =  q30_4 = q1_4 =  q10_4 = moy_4 = moy0_4 = med_4 = med0_4 = Sd_4 = Sd0_4 = NULL
 
 c1 = c2 = c3 = c4 = 0
 
-Prob_15 = Prob0_15 = Cat_15 = NULL
 Prob_2 = Prob0_2 = Cat_2 = NULL
-Prob_3 = Prob0_3 = Cat_3 = NULL
 Prob_4 = Prob0_4 = Cat_4 = NULL
 
 cc = 0
-ff = list.files("./exp_pred/", pattern="RCM")
-for (ii in 1:3){
+ff = list.files("./exp_pred/", pattern="KAPPA")
+for (ii in 1:2){
 	cc = cc + 1
 	cas = strsplit(strsplit(ff[ii],split=".RData")[[1]],split="Test")
 	category[cc] = strsplit(cas[[1]][1],split="_")[[1]][2]
@@ -243,24 +292,6 @@ for (ii in 1:3){
 			Sd0_2[c2] = sd(Yte0)
 		}
 
-		if (Temp[cc] == 3){
-			c3 = c3 + 1
-			load(paste0("./exp_pred/",ff[ii]))
-
-			Prob0_3 = c(Prob0_3,Yte0)
-			Cat_3 = c(Cat_3,rep(cas[1],length(Yte)))
-
-			q30_3[c3] = quantile(Yte0,0.95)
-
-			q10_3[c3] = quantile(Yte0,0.05)
-
-			moy0_3[c3] = mean(Yte0)
-
-			med0_3[c3] = median(Yte0)
-
-			Sd0_3[c3] = sd(Yte0)
-		}
-
 		if (Temp[cc] == 4){
 			c4 = c4 + 1
 			load(paste0("./exp_pred/",ff[ii]))
@@ -283,38 +314,37 @@ for (ii in 1:3){
 }
 
 df = data.frame(
-	sle=c(Prob0_2,Prob0_3,Prob0_4),
-	temp=c(rep("2°C",10000),rep("3°C",10000),rep("4°C",10000))
+	sle=c(Prob0_2,Prob0_4),
+	temp=c(rep("2°C",10000),rep("4°C",10000))
 )
 df$temp = as.factor(df$temp)
 
-TXT2.med = paste0("Median = ",round(median(Prob0_2),3))
-TXT2.q05 = paste0("[",round(quantile(Prob0_2,0.05),3)," ; ",round(quantile(Prob0_2,0.95),3), "]")
+TXT2.med = paste0("Median = ",round(median(Prob0_2)*100,1))
+TXT2.q05 = paste0("[",round(quantile(Prob0_2,0.17)*100,1)," ; ",round(quantile(Prob0_2,0.83)*100,1), "]")
 
-TXT3.med = paste0("Median = ",round(median(Prob0_3),3))
-TXT3.q05 = paste0("[",round(quantile(Prob0_3,0.05),3)," ; ",round(quantile(Prob0_3,0.95),3), "]")
-
-TXT4.med = paste0("Median = ",round(median(Prob0_4),3))
-TXT4.q05 = paste0("[",round(quantile(Prob0_4,0.05),3)," ; ",round(quantile(Prob0_4,0.95),3), "]")
+TXT4.med = paste0("Median = ",round(median(Prob0_4)*100,1))
+TXT4.q05 = paste0("[",round(quantile(Prob0_4,0.17)*100,1)," ; ",round(quantile(Prob0_4,0.83)*100,1), "]")
 
 colo = brewer.pal(n = 8, name = "Dark2")
 
 #### PLOT probabilistic projections
-p.sle <- ggplot(df, aes(x = sle,fill=temp,color=temp))+
-        xlab("slc in 2100 [m SLE]")+
+p.sle <- ggplot(df, aes(x = sle*100,fill=temp,color=temp))+
+        xlab("slc in 2100 [cm SLE]")+
 	  #ylab("Frequency")+
  	  geom_histogram(aes(y=..density..), alpha=0.5, 
                 position="identity")+
- 	  geom_density(alpha=.2,linewidth=1.25) +
+ 	  geom_density(alpha=.3,linewidth=1.25) +
         #geom_bar( position = position_dodge(width = 0.8))+
 	  theme_bw()+tt+
-	  scale_color_manual(values=c(colo[1],colo[6],colo[2]))+
-	  scale_fill_manual(values=c(colo[1],colo[6],colo[2]))+
-	  annotate("text", x = .125, y = 50, label = TXT2.med,size = 6,color=colo[1])+
-	  annotate("text", x = .125, y = 47.5, label = TXT2.q05,size = 6,color=colo[1])+
-	  annotate("text", x = .125, y = 45, label = TXT3.med,size = 6,color=colo[6])+
-	  annotate("text", x = .125, y = 42.5, label = TXT3.q05,size = 6,color=colo[6])+
-	  annotate("text", x = .125, y = 40, label = TXT4.med,size = 6,color=colo[2])+
-	  annotate("text", x = .125, y = 37.5, label = TXT4.q05,size = 6,color=colo[2])
+	  theme(axis.title.x = element_text(size=18),
+		axis.title.y = element_text(size=18),#, face="bold"
+		axis.text.y= element_text(size=18),
+		axis.text.x= element_text(size=18))+
+	  scale_color_manual(values=c(colo[1],colo[2],colo[2]))+
+	  scale_fill_manual(values=c(colo[1],colo[2],colo[2]))+
+	  annotate("text", x = 12.5, y = .30, label = TXT2.med,size = 6,color=colo[1])+
+	  annotate("text", x = 12.5, y = .275, label = TXT2.q05,size = 6,color=colo[1])+
+	  annotate("text", x = 22.5, y = .10, label = TXT4.med,size = 6,color=colo[2])+
+	  annotate("text", x = 22.5, y = .075, label = TXT4.q05,size = 6,color=colo[2])
 	  #ggtitle("GSAT diff. [°C]")#+facet_wrap(~temp)
 

@@ -14,16 +14,59 @@ tt <- theme(
 		axis.text.x= element_text(size=14),
 		axis.ticks = element_line(size = 0.75),
 		legend.title=element_blank(),
-		legend.position="none"
+		legend.position="none",
+		plot.title = element_text(size = 14, face = "bold")
 		)
 
 #### COLORS
 colo = brewer.pal(9,name="Spectral")
 colo[5] = "gold2"
 
-#################################################################
-##### POST-TREATMENT - FORMAT
-#################################################################
+#########################################################
+##### FUNCTION
+#########################################################
+CAfct <- function(y,lo,up){
+	id <- NULL
+	for (i in 1:length(y)){
+		id[i] <- ifelse(y[i] >= lo[i] & y[i] <= up[i], 1, 0)
+	}
+	sum(id)/length(y)
+}
+
+crps_func <- function(Y.te.BB,Qte0){
+	qq = seq(0,1,by=0.05)
+	nmc = length(Y.te.BB)
+	cov.pi = matrix(0,length(qq),nmc)
+	for (kk in 1:(length(qq))){
+		quant = Qte0[,kk]
+		for (imc in 1:nmc){
+		if (Y.te.BB[imc] < quant[imc]){
+			cov.pi[kk,imc] = (-Y.te.BB[imc]+quant[imc])*(1-qq[kk])
+		}
+		if (quant[imc] <= Y.te.BB[imc]){
+			cov.pi[kk,imc] = (Y.te.BB[imc]-quant[imc])*(qq[kk])
+		}
+		}
+	}
+	CRPS = mean(2*apply(cov.pi,2,sum)*0.05)
+	return(CRPS)
+}
+source("./utils/utils.R")
+#########################################################
+##### DATA
+#########################################################
+load("./data/GrIS_MME_2100.RData")
+df.tr = df.tr1
+load("./data/pval_Permutation.RData")
+## filter with the importance variables
+filtre = which(pval[,"pvalue"]<0.05)
+df.tr00 = df.tr1[,-c(1,2)]
+df.tr00 = df.tr00[,c(filtre,ncol(df.tr00))]
+d = ncol(df.tr00)
+
+#######################################
+#### FIGURE FOR GIVEN GSAT
+#######################################
 graphics.off()
 
 ## List of cases
@@ -32,7 +75,7 @@ CClist = c("RCP","RCM","KAPPA","ISM")
 nom_case = type=  NULL 
 Iter = NULL
 
-RAE = RAE0 = QQ = QQ0 = NULL
+YHAT = TRUTH = ITER = Q1HAT = Q3HAT= Q2HAT =  QHAT = GSAT = NOM_CASE = NOM_CAT = NULL
 
 cc = 0
 for (i in 1:length(CClist)){
@@ -56,82 +99,161 @@ for (ii in 1:length(ff)){
 
 	load(paste0("./exp_cv/",ff[ii]))
 
-	RAE[cc] = mean(abs(Yte-Y.te.BB)/Y.te.BB)
-	QQ[cc] = 1-sum((Y.te.BB-Yte)^2)/sum((Y.te.BB-mean(Y.te.BB))^2)
+	YHAT = c(YHAT,Yte)
+	Q1HAT = c(Q1HAT,Qte[,2])
+	Q3HAT = c(Q3HAT,Qte[,20])
+	Q2HAT = c(Q2HAT,Qte[,11])
+	QHAT = rbind(QHAT,Qte)
+	TRUTH = c(TRUTH,Y.te.BB)
+	load(file=paste0("./exp_cv/exp/Exp_Cas",EXPR,"_iter",Iter[cc],".RData"))
+	GSAT = c(GSAT,df.tr00[ncv,"C"])
+	ITER = c(ITER,rep(Iter[cc],length(df.tr00[ncv,"C"])))
+	NOM_CASE = c(NOM_CASE,rep(nom_case[cc],200))
+	NOM_CAT = c(NOM_CAT,rep(type[cc],200))
 }
 
 }##Clist
 
 ### REFERENCE SOLUTION
 for (bb in 1:25){
-
+	cc = cc + 1
+	nom_case[cc] = "reference"
+	type[cc] = "reference"
 	load(paste0("./exp_cv/init/init_",bb,".RData"))
 
-	RAE0[bb] = mean(abs(Yte0-Y.te.BB)/Y.te.BB)
-	QQ0[bb] = 1-sum((Y.te.BB-Yte0)^2)/sum((Y.te.BB-mean(Y.te.BB))^2)
+	YHAT = c(YHAT,Yte0)
+	Q1HAT = c(Q1HAT,Qte0[,2])
+	Q3HAT = c(Q3HAT,Qte0[,20])
+	Q2HAT = c(Q2HAT,Qte0[,11])
+	QHAT = rbind(QHAT,Qte0)
+	TRUTH = c(TRUTH,Y.te.BB)
+	load(file=paste0("./exp_cv/exp/Exp_Cas","RCP","_iter",bb,".RData"))
+	GSAT = c(GSAT,df.tr00[ncv,"C"])
+	ITER = c(ITER,rep(bb,length(df.tr00[ncv,"C"])))
+
+	NOM_CASE = c(NOM_CASE,rep(nom_case[cc],200))
+	NOM_CAT = c(NOM_CAT,rep(type[cc],200))
 
 }
 
-RAE0M = QQ0M= NULL
-for (i in 1:25){
-	f = which(Iter==i)
-	RAE0M = c(RAE0M,mean(RAE0[i]))
-	QQ0M = c(QQ0M,mean(QQ0[i]))
+rr = seq(0,1,by=0.25)#runif(0.1*nrow(df.tr00))
+qq = quantile(df.tr00[,"C"],rr)
+gsatC= cut(as.vector(GSAT),breaks=qq)
+
+fc = unique(NOM_CASE)
+ca = rae = crps = qq = cas = gsat = NULL
+c0 = 0
+for (k in fc){
+c = 0
+c0 = c0+1
+for (i in unique(gsatC)){
+	c = c + 1
+	for (j in 1:25){	
+		f0 = which(gsatC == i & ITER == j & NOM_CASE == "reference")
+			rae0 = mean(abs(TRUTH[f0] - YHAT[f0])/TRUTH[f0])
+			qq0 = Q2(TRUTH[f0],YHAT[f0])
+			crps0 = crps_func(TRUTH[f0],QHAT[f0,])
+
+		f = which(gsatC == i & ITER == j & NOM_CASE == k)
+			rae = c(rae,(rae0-mean(abs(TRUTH[f] - YHAT[f])/TRUTH[f]))/rae0)
+			qq = c(qq,(qq0-Q2(TRUTH[f],YHAT[f]))/qq0)
+			crps = c(crps,(crps0-crps_func(TRUTH[f],QHAT[f,])/crps0))
+
+			cas = c(cas,k)
+			gsat = c(gsat,i)	
+	}
+}
 }
 
-df.plt0 = data.frame(
-		case = c(nom_case,rep("0riginal",length(QQ0M))),
-		category = c(type,rep("0riginal",length(QQ0M))),
-		rae = c(RAE,RAE0M),
-		qq = c(QQ,QQ0M)		
-)
+df.plt= data.frame(
+		Q2=qq,RAE=rae,CRPS=crps,
+		cas,GSAT=gsat)
 
-###############################################################################
-#### DEVIATION from REFERENCE SOLUTION
-###############################################################################
-f = which(df.plt0$category %in% c("0riginal"))
-ref = df.plt0[f,4]
-ref.rae = df.plt0[f,3]
-qq = rae= cas =  NULL
-cc = unique(df.plt0$case)[-length(unique(df.plt0$case))]
-for (i in cc){
-	f = which(df.plt0$case %in% i)
-	qq = c(qq,(df.plt0[f,4]-ref)/ref)
-	rae = c(rae,(df.plt0[f,3]-ref.rae)/ref.rae)
-	cas = c(cas,rep(i,length(f)))
-}
-
-df.plt00 = data.frame(
-	qq,
-	rae,
-	cas,
-	cat = df.plt0$category[1:length(cas)]
-)
-df.plt00$cas = factor(df.plt00$cas,levels=unique(df.plt00$cas)) 
-### rename some values
-df.plt00$cat = plyr::revalue(df.plt00$cat,
-			c(
-				"CasRCP" = "RCP",
-				"CasISM" = "ISM",
-				"CasKAPPA" = paste0(expression(Kappa)),
-				"CasRCM" = "RCM"
-			)
-			)
-
-df.plt00$cas = plyr::revalue(df.plt00$cas,
+df.plt$cas = plyr::revalue(df.plt$cas,
 			c(
 				"SSP126 245" = "woSSP585",
 				"SSP126 585" = "woSSP245",
 				"SSP245 585" = "woSS126",
-				"Kappa-int" = " Med. & extr. Kappa",
-				"Kappa-ext" = " Narrow Kappa"
+				"Extrem" = " Med. & extr. Kappa",
+				"Narrow" = " Narrow Kappa"
 			)
 			)
 
-f = which(df.plt00$cas != "woMAR")## extract case woMAR
-plt.rae = ggplot(df.plt00[f,],aes(x=as.factor(cas),y=rae*100,fill=as.factor(cas)))+geom_boxplot()+
-			scale_fill_manual(values=colo)+
-	geom_jitter()+theme_bw()+tt+xlab("")+ylab("RAE rel. diff. [%]")+ggtitle("")+
-	theme(legend.position="none",legend.text=element_text(size=14))
-print(plt.rae)
+f = which(df.plt$cas=="reference")
+df.plt = df.plt[-f,]
+df.plt$cas = factor(df.plt$cas,levels=unique(df.plt$cas)[c(1:3,8:9,6:7,4:5)])
 
+## configruaiton of limits for plotting
+L.qq=250
+L.crps=-10
+L.rae=-650
+
+L.qq = 1000
+L.crps=-20
+L.rae=-1000
+
+f = which(df.plt$GSAT==unique(gsatC)[2])
+plt.qq1= ggplot(df.plt[f,],aes(y=cas,x=Q2*100,color=cas))+geom_boxplot(linewidth=1.25)+#geom_jitter() + 
+	scale_colour_manual(values=(colo))+
+	xlim(0,L.qq)+
+	theme_bw()+theme(
+	axis.text.x=element_blank(), 
+      axis.ticks.x=element_blank())+ylab("")+xlab("Q² rel. diff. [%]")+tt+ggtitle("(b)")
+plt.rae1= ggplot(df.plt[f,],aes(y=cas,x=RAE*100,color=cas))+geom_boxplot(linewidth=1.25)+#geom_jitter() + 
+	scale_colour_manual(values=(colo))+
+	xlim(L.rae,0)+
+	theme_bw()+theme(
+	axis.text.x=element_blank(), 
+      axis.ticks.x=element_blank())+ylab("")+xlab("RAE rel. diff. [%]")+tt+ggtitle("(a)")
+plt.crps1= ggplot(df.plt[f,],aes(y=cas,x=CRPS,color=cas))+geom_boxplot(linewidth=1.25)+#geom_jitter() + 
+	scale_colour_manual(values=(colo))+
+	xlim(L.crps,0)+
+	theme_bw()+theme(
+	axis.text.x=element_blank(), 
+      axis.ticks.x=element_blank())+ylab("")+xlab("CRPS rel. diff. [%]")+tt+ggtitle("(c)")
+
+f = which(df.plt$GSAT==unique(gsatC)[3])
+plt.qq= ggplot(df.plt[f,],aes(y=cas,x=Q2*100,color=cas))+geom_boxplot(linewidth=1.25)+#geom_jitter() + 
+	scale_colour_manual(values=(colo))+
+	xlim(0,L.qq)+
+	theme_bw()+theme(
+	axis.text.x=element_blank(), 
+      axis.ticks.x=element_blank())+ylab("")+xlab("Q² rel. diff. [%]")+tt+ggtitle("(e)")
+plt.rae= ggplot(df.plt[f,],aes(y=cas,x=RAE*100,color=cas))+geom_boxplot(linewidth=1.25)+#geom_jitter() + 
+	scale_colour_manual(values=(colo))+
+	xlim(L.rae,0)+
+	theme_bw()+theme(
+	axis.text.x=element_blank(), 
+      axis.ticks.x=element_blank())+ylab("")+xlab("RAE rel. diff. [%]")+tt+ggtitle("(d)")
+plt.crps= ggplot(df.plt[f,],aes(y=cas,x=CRPS,color=cas))+geom_boxplot(linewidth=1.25)+#geom_jitter() + 
+	scale_colour_manual(values=(colo))+
+	xlim(L.crps,0)+
+	theme_bw()+theme(
+	axis.text.x=element_blank(), 
+      axis.ticks.x=element_blank())+ylab("")+xlab("CRPS rel. diff. [%]")+tt+ggtitle("(f)")
+
+gridExtra::grid.arrange(
+	plt.rae1,plt.qq1,plt.crps1,
+	plt.rae,plt.qq,plt.crps,
+	ncol=3)
+
+#######################################
+#### FIGURE ALL GSAT
+#######################################
+f = which(df.plt$GSAT==unique(gsatC))
+plt.qq= ggplot(df.plt[f,],aes(y=cas,x=Q2*100,color=cas))+geom_boxplot(linewidth=1.25)+#geom_jitter() + 
+	scale_colour_manual(values=(colo))+
+	theme_bw()+theme(
+	axis.text.x=element_blank(), 
+      axis.ticks.x=element_blank())+ylab("")+xlab("Q² rel. diff. [%]")+tt+ggtitle("(b)")+xlim(0,1000)#+facet_wrap(~GSAT)
+plt.rae= ggplot(df.plt[f,],aes(y=cas,x=RAE*100,color=cas))+geom_boxplot(linewidth=1.25)+#geom_jitter() + 
+	scale_colour_manual(values=(colo))+
+	theme_bw()+theme(
+	axis.text.x=element_blank(), 
+      axis.ticks.x=element_blank())+ylab("")+xlab("RAE rel. diff. [%]")+tt+ggtitle("(a)")+xlim(-1000,0)#+facet_wrap(~GSAT)
+plt.crps= ggplot(df.plt[f,],aes(y=cas,x=CRPS,color=cas))+geom_boxplot(linewidth=1.25)+#geom_jitter() + 
+	scale_colour_manual(values=(colo))+
+	theme_bw()+theme(
+	axis.text.x=element_blank(), 
+      axis.ticks.x=element_blank())+ylab("")+xlab("CRPS rel. diff. [%]")+tt+ggtitle("(c)")+xlim(-15,0)#+facet_wrap(~GSAT)
+gridExtra::grid.arrange(plt.rae,plt.qq,plt.crps,ncol=3)
