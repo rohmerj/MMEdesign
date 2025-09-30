@@ -25,4 +25,4 @@ Necessary R packages:
 - Plotting utilities [ggplot2](https://ggplot2.tidyverse.org/), [RColorBrewer](https://cran.r-project.org/web/packages/RColorBrewer/index.html) and [cowplot](https://cran.r-project.org/web/packages/cowplot/index.html)
 - Data manipulation [dplyr](https://cran.r-project.org/web/packages/dplyr/index.html)
 
-==== FIGURES are [here](figures.zip) ====
+==== FIGURES are [here](Figures.zip) ====
