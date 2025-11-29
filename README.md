@@ -1,10 +1,11 @@
 # Emulator's experiments for MME design
 
-This repository contains the data and codes of [Rohmer et al. 2025 submitted](https://egusphere.copernicus.org/preprints/2025/egusphere-2025-52/).
+This repository contains the data and codes of [Rohmer et al. 2025](https://egusphere.copernicus.org/preprints/2025/egusphere-2025-52/). The data analysed correspond to the 2100 sea level
+contributions of the Greenland ice sheet dervived from the Multi-Model Ensemble (MME) desribed in [Goelzer et al., 2025](https://doi.org/10.5194/egusphere-2025-3098). This work has been funded by the H2020 project [PROTECT](https://protect-slr.eu/) - grant no. 869304.
 
 ==== FIRST: unzip the [files](files.zip) ====
 
-The different scrips allow to:
+The different scripts allow to:
 - Analyse the 2100 GrIS MME stored in [`./data`](./data) with the scripts 
 	- [1-run_analysis_originalMME](1-run_analysis_originalMME.R) for ploting the histograms, the projections and the validaiton of the RF reference solution
 	- [0-run_sensitivity](./0-run_sensitivity.R) for running the sensitivity analsyis
